@@ -12,7 +12,7 @@ A beautiful, fast web application for searching and exploring comprehensive pros
 
 ## Live Demo
 
-**Your site will be live at**: https://dahldoescards.github.io/prospect-stats-dashboard
+**Your site will be live at**: https://dahldoescards.github.io/psd
 
 ## Files
 
@@ -41,8 +41,8 @@ A beautiful, fast web application for searching and exploring comprehensive pros
 ## Deployment
 
 ### GitHub Pages (Current Setup)
-- Repository: https://github.com/dahldoescards/prospect-stats-dashboard
-- Live URL: https://dahldoescards.github.io/prospect-stats-dashboard
+- Repository: https://github.com/dahldoescards/psd
+- Live URL: https://dahldoescards.github.io/psd
 - Auto-deploys when you push changes
 
 ## Customization
