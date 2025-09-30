@@ -1,137 +1,126 @@
-# Prospect Stats Dashboard
+# 🏟️ Prospect Stats Dashboard
 
-A web application for searching and exploring comprehensive prospect statistics across all seasons and levels.
+A beautiful, fast web application for searching and exploring comprehensive prospect statistics across all seasons and levels.
 
-## Features
+## ✨ Features
 
-- 🔍 **Fast Search**: Search by player name with fuzzy matching
-- 📊 **Comprehensive Stats**: View all seasons and levels for each prospect
-- 📱 **Responsive Design**: Works on desktop and mobile devices
-- ⚡ **Client-Side**: No backend required, runs entirely in the browser
+- 🔍 **Smart Search**: Exact name matching with fuzzy fallback
+- 📊 **Complete Stats**: All seasons and levels for each prospect
+- 📱 **Responsive Design**: Works perfectly on desktop and mobile
+- ⚡ **Lightning Fast**: Client-side search with no server required
+- 🎨 **Beautiful UI**: Modern, professional design
 
-## Local Development
+## 🚀 Live Demo
 
-1. **Start a local server** (required due to CORS restrictions):
+**Your site will be live at**: https://dahldoescards.github.io/prospect-stats-dashboard
+
+## 🛠️ Local Development
+
+1. **Start a local server** (required due to CORS):
    ```bash
-   # Python 3
+   cd "/Users/andrewdahl/Prospect Dashboard"
    python3 -m http.server 8000
-   
-   # Python 2
-   python -m SimpleHTTPServer 8000
-   
-   # Node.js (if you have http-server installed)
-   npx http-server
    ```
 
-2. **Open your browser** and navigate to:
-   ```
-   http://localhost:8000
-   ```
+2. **Open your browser**: http://localhost:8000
 
-## Deployment Options
+## 📁 Files
 
-### GitHub Pages (Recommended)
+- `index.html` - The main web application
+- `Prospect stats.json` - Your complete prospect data (6.5MB, 333K+ lines)
+- `README.md` - This documentation
 
-1. **Create a new repository** on GitHub
-2. **Upload files**:
-   - `index.html`
-   - `Prospect stats.json`
-   - `README.md`
-3. **Enable GitHub Pages**:
-   - Go to repository Settings → Pages
-   - Select "Deploy from a branch"
-   - Choose "main" branch and "/ (root)" folder
-   - Click Save
-4. **Access your site** at: `https://yourusername.github.io/your-repo-name`
+## 🔍 How to Use
 
-### Netlify
+1. **Search by exact name**: Type "Sheng-En Lin" → Shows only that player
+2. **Search by partial name**: Type "Juan" → Shows all players with "Juan" in their name
+3. **View all seasons**: Each player shows all their seasons sorted newest first
+4. **See key stats**: Games, AVG, HR, RBI, OPS, ISO, wRC+, BB%, K%, SwStr%, pfxContact%, ERA, W-L, IP, FIP
 
-1. **Drag and drop** the folder containing `index.html` and `Prospect stats.json` to [Netlify Drop](https://app.netlify.com/drop)
-2. **Your site will be live** immediately with a random URL
-3. **Customize the URL** in your site settings
+## 📊 Stats Displayed
 
-### Vercel
+**Hitting Stats**: Games, AVG, HR, RBI, OPS, ISO, wRC+, BB%, K%, SwStr%, pfxContact%  
+**Pitching Stats**: ERA, W, L, IP, K%, BB%, FIP
 
-1. **Install Vercel CLI**: `npm i -g vercel`
-2. **Deploy**: `vercel --prod` in the project directory
-3. **Follow the prompts** to set up your project
+## 🎯 Search Behavior
 
-## File Structure
+- **Exact Match**: If you type the exact player name, only that player appears
+- **Fuzzy Search**: If no exact match, shows all similar/partial matches
+- **Real-time**: Search updates as you type (minimum 2 characters)
 
-```
-Prospect Dashboard/
-├── index.html              # Main application file
-├── Prospect stats.json     # Data file (your prospect statistics)
-└── README.md              # This file
-```
+## 🌐 Deployment
 
-## Data Format
+### GitHub Pages (Current Setup)
+- Repository: https://github.com/dahldoescards/prospect-stats-dashboard
+- Live URL: https://dahldoescards.github.io/prospect-stats-dashboard
+- Auto-deploys when you push changes
 
-The application expects a JSON file with the following structure:
+### Alternative: Netlify
+1. Go to https://app.netlify.com/drop
+2. Drag and drop the folder
+3. Instant deployment with custom URL
 
+## 🔧 Technical Details
+
+- **Framework**: Pure HTML/CSS/JavaScript (no dependencies)
+- **Data**: 333K+ lines of prospect statistics
+- **Search**: Client-side indexing for instant results
+- **Performance**: Loads ~6.5MB JSON file efficiently
+- **Browser Support**: Chrome 60+, Firefox 55+, Safari 12+, Edge 79+
+
+## 🎨 Customization
+
+Edit `index.html` to customize:
+- **Colors/Styling**: Modify the CSS variables
+- **Stats Displayed**: Update the `statsToShow` array
+- **Search Behavior**: Adjust the `searchPlayers()` method
+- **Layout**: Change the grid and responsive breakpoints
+
+## 🐛 Troubleshooting
+
+**"Failed to load JSON" Error**:
+- Make sure you're using http://localhost:8000 (not file://)
+- Check that `Prospect stats.json` is in the same folder as `index.html`
+
+**Search Not Working**:
+- Ensure the JSON has a `player` field for each prospect
+- Check browser console for errors
+- Try refreshing the page
+
+**Performance Issues**:
+- The app handles 6.5MB efficiently, but very large datasets (>50MB) may need optimization
+- Use browser dev tools to monitor memory usage
+
+## 📈 Data Structure
+
+Your JSON contains prospect objects with:
 ```json
-[
-  {
-    "player": "Player Name",
-    "oPlayerId": "unique_id",
-    "Height": "6'0\"",
-    "Weight": 210,
-    "Bats": "R",
-    "Throws": "R",
-    "Age": 22,
-    "llevel": "AAA",
-    "stats": [
-      {
-        "Season": "2024",
-        "Team": "Team Name",
-        "llevel": "AAA",
-        "Age": 22,
-        "G": 50,
-        "AVG": ".280",
-        "HR": 15,
-        "OPS": ".850",
-        // ... other stats
-      }
-    ]
-  }
-]
+{
+  "player": "Player Name",
+  "oPlayerId": "unique_id", 
+  "Height": "6'0\"",
+  "Weight": 210,
+  "Bats": "R",
+  "Throws": "R", 
+  "Age": 22,
+  "llevel": "AAA",
+  "stats": [
+    {
+      "Season": "2024",
+      "Team": "Team Name",
+      "llevel": "AAA",
+      "G": 50,
+      "AVG": ".280",
+      "HR": 15,
+      "OPS": ".850"
+      // ... more stats
+    }
+  ]
+}
 ```
 
-## Browser Compatibility
+## 🤝 Sharing
 
-- Chrome 60+
-- Firefox 55+
-- Safari 12+
-- Edge 79+
+Share this link with your team: **https://dahldoescards.github.io/prospect-stats-dashboard**
 
-## Performance Notes
-
-- The application loads the entire JSON file into memory for fast searching
-- For very large datasets (>50MB), consider implementing server-side search
-- The search index is built client-side for optimal performance
-
-## Customization
-
-You can customize the application by modifying:
-
-- **Styling**: Edit the CSS in the `<style>` section of `index.html`
-- **Search behavior**: Modify the `searchPlayers()` method in the JavaScript
-- **Displayed stats**: Update the `statsToShow` array in `renderSeasonStats()`
-- **Layout**: Adjust the HTML structure and CSS grid layouts
-
-## Troubleshooting
-
-### "Failed to load JSON" Error
-- Make sure you're running a local server (not opening the file directly)
-- Check that `Prospect stats.json` is in the same directory as `index.html`
-- Verify the JSON file is valid JSON format
-
-### Search Not Working
-- Ensure the JSON file has a `player` field for each prospect
-- Check browser console for JavaScript errors
-- Verify the data structure matches the expected format
-
-### Performance Issues
-- For large datasets, consider splitting the JSON by player or implementing pagination
-- Use browser developer tools to monitor memory usage
-- Consider implementing server-side search for datasets >100MB
+Perfect for scouts, analysts, and anyone who needs quick access to prospect statistics!
