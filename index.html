@@ -130,6 +130,33 @@
             border-radius: 4px;
         }
 
+        .scout-grades {
+            margin-top: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .grade-item {
+            background: rgba(255,255,255,0.15);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .grade-label {
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .grade-value {
+            font-weight: 700;
+            color: #fff;
+        }
+
         .stats-container {
             padding: 20px;
         }
@@ -288,6 +315,7 @@
         class ProspectDashboard {
             constructor() {
                 this.data = [];
+                this.scoutGrades = [];
                 this.searchIndex = new Map();
                 this.searchInput = document.getElementById('searchInput');
                 this.status = document.getElementById('status');
@@ -333,15 +361,25 @@
                 try {
                     this.updateStatus('Loading prospect data...', 'loading');
                     
-                    const response = await fetch('./Prospect stats.json');
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    // Load both prospect stats and scout grades
+                    const [statsResponse, gradesResponse] = await Promise.all([
+                        fetch('./Prospect stats.json'),
+                        fetch('./Scout grades updated.json')
+                    ]);
+                    
+                    if (!statsResponse.ok) {
+                        throw new Error(`HTTP ${statsResponse.status}: ${statsResponse.statusText}`);
                     }
                     
-                    this.data = await response.json();
+                    this.data = await statsResponse.json();
                     
                     if (!Array.isArray(this.data)) {
                         throw new Error('Invalid data format: expected array of players');
+                    }
+                    
+                    // Load scout grades if available
+                    if (gradesResponse.ok) {
+                        this.scoutGrades = await gradesResponse.json();
                     }
                     
                     this.buildSearchIndex();
@@ -453,8 +491,38 @@
                 this.results.innerHTML = players.map(player => this.renderPlayerCard(player)).join('');
             }
 
+            findScoutGrades(playerName) {
+                if (!this.scoutGrades || this.scoutGrades.length === 0) return null;
+                
+                const normalizedName = this.normalizeName(playerName);
+                return this.scoutGrades.find(grade => 
+                    this.normalizeName(grade.playerName) === normalizedName
+                );
+            }
+
+            renderScoutGrades(grades) {
+                if (!grades) return '';
+                
+                const gradeKeys = ['Hit', 'Game', 'Raw', 'Spd', 'Fld', 'FB', 'SL', 'CH', 'CB', 'CT', 'CMD'];
+                const availableGrades = gradeKeys.filter(key => grades[key]);
+                
+                if (availableGrades.length === 0) return '';
+                
+                return `
+                    <div class="scout-grades">
+                        ${availableGrades.map(key => `
+                            <span class="grade-item">
+                                <span class="grade-label">${key}:</span>
+                                <span class="grade-value">${grades[key]}</span>
+                            </span>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
             renderPlayerCard(player) {
                 const stats = player.stats || [];
+                const scoutGrades = this.findScoutGrades(player.player);
                 
                 // Sort stats by season (newest first)
                 const sortedStats = [...stats].sort((a, b) => {
@@ -475,6 +543,7 @@
                                 <span>Throws: ${player.Throws || 'N/A'}</span>
                                 <span>Level: ${player.llevel || 'N/A'}</span>
                             </div>
+                            ${this.renderScoutGrades(scoutGrades)}
                         </div>
                         <div class="stats-container">
                             ${sortedStats.map(stat => this.renderSeasonStats(stat)).join('')}
