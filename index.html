@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prospect Stats Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+
+        .search-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .search-input::placeholder {
+            color: #adb5bd;
+        }
+
+        .status {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+            font-size: 0.95rem;
+        }
+
+        .results {
+            padding: 20px 30px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .player-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .player-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+
+        .player-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+        }
+
+        .player-name {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .player-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .player-info span {
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .stats-container {
+            padding: 20px;
+        }
+
+        .season-stats {
+            margin-bottom: 15px;
+        }
+
+        .season-header {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #495057;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .season-year {
+            font-size: 1.1rem;
+        }
+
+        .season-team {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            padding: 0 10px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6c757d;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #495057;
+            margin-top: 2px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .no-results h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .search-section {
+                padding: 20px;
+            }
+            
+            .results {
+                padding: 15px 20px;
+            }
+            
+            .player-info {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏟️ Prospect Stats Dashboard</h1>
+            <p>Search and explore comprehensive prospect statistics across all seasons and levels</p>
+        </div>
+
+        <div class="search-section">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    class="search-input" 
+                    placeholder="Enter player name (e.g., Juan Soto, Mike Trout...)"
+                    autocomplete="off"
+                >
+            </div>
+        </div>
+
+        <div id="status" class="status">
+            <div class="loading">
+                <div class="spinner"></div>
+                Loading prospect data...
+            </div>
+        </div>
+
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        class ProspectDashboard {
+            constructor() {
+                this.data = [];
+                this.searchIndex = new Map();
+                this.searchInput = document.getElementById('searchInput');
+                this.status = document.getElementById('status');
+                this.results = document.getElementById('results');
+                
+                this.init();
+            }
+
+            normalizeName(name) {
+                return (name || '').trim().toLowerCase()
+                    .replace(/[^\w\s]/g, '') // Remove special characters
+                    .replace(/\s+/g, ' '); // Normalize spaces
+            }
+
+            buildSearchIndex() {
+                this.searchIndex.clear();
+                
+                for (const player of this.data) {
+                    const normalizedName = this.normalizeName(player.player);
+                    if (!normalizedName) continue;
+                    
+                    // Store exact match
+                    if (!this.searchIndex.has(normalizedName)) {
+                        this.searchIndex.set(normalizedName, []);
+                    }
+                    this.searchIndex.get(normalizedName).push(player);
+                    
+                    // Store partial matches for better search
+                    const nameParts = normalizedName.split(' ');
+                    for (const part of nameParts) {
+                        if (part.length > 2) { // Only index parts longer than 2 chars
+                            const key = `partial:${part}`;
+                            if (!this.searchIndex.has(key)) {
+                                this.searchIndex.set(key, []);
+                            }
+                            this.searchIndex.get(key).push(player);
+                        }
+                    }
+                }
+            }
+
+            async loadData() {
+                try {
+                    this.updateStatus('Loading prospect data...', 'loading');
+                    
+                    const response = await fetch('./Prospect stats.json');
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    this.data = await response.json();
+                    
+                    if (!Array.isArray(this.data)) {
+                        throw new Error('Invalid data format: expected array of players');
+                    }
+                    
+                    this.buildSearchIndex();
+                    this.updateStatus(`Loaded ${this.data.length.toLocaleString()} prospects. Start typing to search!`, 'success');
+                    
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    this.updateStatus(`Error loading data: ${error.message}`, 'error');
+                }
+            }
+
+            updateStatus(message, type = 'info') {
+                const statusEl = this.status;
+                
+                if (type === 'loading') {
+                    statusEl.innerHTML = `
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            ${message}
+                        </div>
+                    `;
+                } else if (type === 'error') {
+                    statusEl.innerHTML = `<div class="error">${message}</div>`;
+                } else {
+                    statusEl.innerHTML = `<div>${message}</div>`;
+                }
+            }
+
+            searchPlayers(query) {
+                if (!query.trim()) {
+                    this.results.innerHTML = '';
+                    return;
+                }
+
+                const normalizedQuery = this.normalizeName(query);
+                
+                // Check for exact match first
+                const exactMatches = this.searchIndex.get(normalizedQuery) || [];
+                
+                if (exactMatches.length > 0) {
+                    // If there's an exact match, only show that player
+                    this.displayResults(exactMatches, query);
+                    return;
+                }
+                
+                // No exact match, proceed with fuzzy search
+                const matches = new Set();
+                
+                // Partial matches
+                const queryParts = normalizedQuery.split(' ');
+                for (const part of queryParts) {
+                    if (part.length > 2) {
+                        const partialMatches = this.searchIndex.get(`partial:${part}`) || [];
+                        partialMatches.forEach(player => matches.add(player));
+                    }
+                }
+                
+                // Fuzzy search for close matches
+                for (const [key, players] of this.searchIndex.entries()) {
+                    if (key.startsWith('partial:')) continue;
+                    
+                    if (key.includes(normalizedQuery) || normalizedQuery.includes(key)) {
+                        players.forEach(player => matches.add(player));
+                    }
+                }
+                
+                const results = Array.from(matches);
+                this.displayResults(results, query);
+            }
+
+            displayResults(players, query) {
+                if (players.length === 0) {
+                    this.results.innerHTML = `
+                        <div class="no-results">
+                            <h3>No players found</h3>
+                            <p>No prospects match "${query}". Try a different name or check spelling.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Check if this is an exact match
+                const normalizedQuery = this.normalizeName(query);
+                const isExactMatch = players.length === 1 && 
+                    this.normalizeName(players[0].player) === normalizedQuery;
+
+                // Sort by relevance (exact matches first, then by name)
+                players.sort((a, b) => {
+                    const aName = this.normalizeName(a.player);
+                    const bName = this.normalizeName(b.player);
+                    const queryNorm = this.normalizeName(query);
+                    
+                    const aExact = aName === queryNorm;
+                    const bExact = bName === queryNorm;
+                    
+                    if (aExact && !bExact) return -1;
+                    if (!aExact && bExact) return 1;
+                    
+                    return a.player.localeCompare(b.player);
+                });
+
+                // Update status message
+                if (isExactMatch) {
+                    this.updateStatus(`Found exact match: ${players[0].player}`, 'success');
+                } else {
+                    this.updateStatus(`Found ${players.length} players matching "${query}"`, 'success');
+                }
+
+                this.results.innerHTML = players.map(player => this.renderPlayerCard(player)).join('');
+            }
+
+            renderPlayerCard(player) {
+                const stats = player.stats || [];
+                
+                // Sort stats by season (newest first)
+                const sortedStats = [...stats].sort((a, b) => {
+                    const yearA = parseInt(a.Season) || 0;
+                    const yearB = parseInt(b.Season) || 0;
+                    return yearB - yearA;
+                });
+
+                return `
+                    <div class="player-card">
+                        <div class="player-header">
+                            <div class="player-name">${player.player}</div>
+                            <div class="player-info">
+                                <span>Age: ${player.Age || 'N/A'}</span>
+                                <span>Height: ${player.Height || 'N/A'}</span>
+                                <span>Weight: ${player.Weight || 'N/A'} lbs</span>
+                                <span>Bats: ${player.Bats || 'N/A'}</span>
+                                <span>Throws: ${player.Throws || 'N/A'}</span>
+                                <span>Level: ${player.llevel || 'N/A'}</span>
+                            </div>
+                        </div>
+                        <div class="stats-container">
+                            ${sortedStats.map(stat => this.renderSeasonStats(stat)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderSeasonStats(stat) {
+                const statsToShow = [
+                    { key: 'G', label: 'Games' },
+                    { key: 'AVG', label: 'AVG' },
+                    { key: 'HR', label: 'HR' },
+                    { key: 'RBI', label: 'RBI' },
+                    { key: 'OPS', label: 'OPS' },
+                    { key: 'ISO', label: 'ISO' },
+                    { key: 'wRC+', label: 'wRC+' },
+                    { key: 'BB%', label: 'BB%' },
+                    { key: 'K%', label: 'K%' },
+                    { key: 'SwStr%', label: 'SwStr%' },
+                    { key: 'pfxContact%', label: 'pfxContact%' },
+                    { key: 'ERA', label: 'ERA' },
+                    { key: 'W', label: 'W' },
+                    { key: 'L', label: 'L' },
+                    { key: 'IP', label: 'IP' },
+                    { key: 'FIP', label: 'FIP' }
+                ];
+
+                const relevantStats = statsToShow.filter(s => 
+                    stat[s.key] !== undefined && stat[s.key] !== null && stat[s.key] !== ''
+                );
+
+                return `
+                    <div class="season-stats">
+                        <div class="season-header">
+                            <span class="season-year">${stat.Season || 'N/A'}</span>
+                            <span class="season-team">${stat.Team || 'N/A'} • ${stat.llevel || 'N/A'}</span>
+                        </div>
+                        <div class="stats-grid">
+                            ${relevantStats.map(s => `
+                                <div class="stat-item">
+                                    <div class="stat-label">${s.label}</div>
+                                    <div class="stat-value">${stat[s.key]}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            init() {
+                this.searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.trim();
+                    if (query.length >= 2) {
+                        this.searchPlayers(query);
+                    } else if (query.length === 0) {
+                        this.results.innerHTML = '';
+                    }
+                });
+
+                // Handle Enter key
+                this.searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.searchPlayers(e.target.value.trim());
+                    }
+                });
+
+                this.loadData();
+            }
+        }
+
+        // Initialize the dashboard when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new ProspectDashboard();
+        });
+    </script>
+</body>
+</html>
