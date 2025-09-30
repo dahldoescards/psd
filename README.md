@@ -14,16 +14,6 @@ A beautiful, fast web application for searching and exploring comprehensive pros
 
 **Your site will be live at**: https://dahldoescards.github.io/prospect-stats-dashboard
 
-## 🛠️ Local Development
-
-1. **Start a local server** (required due to CORS):
-   ```bash
-   cd "/Users/andrewdahl/Prospect Dashboard"
-   python3 -m http.server 8000
-   ```
-
-2. **Open your browser**: http://localhost:8000
-
 ## 📁 Files
 
 - `index.html` - The main web application
@@ -55,19 +45,6 @@ A beautiful, fast web application for searching and exploring comprehensive pros
 - Live URL: https://dahldoescards.github.io/prospect-stats-dashboard
 - Auto-deploys when you push changes
 
-### Alternative: Netlify
-1. Go to https://app.netlify.com/drop
-2. Drag and drop the folder
-3. Instant deployment with custom URL
-
-## 🔧 Technical Details
-
-- **Framework**: Pure HTML/CSS/JavaScript (no dependencies)
-- **Data**: 333K+ lines of prospect statistics
-- **Search**: Client-side indexing for instant results
-- **Performance**: Loads ~6.5MB JSON file efficiently
-- **Browser Support**: Chrome 60+, Firefox 55+, Safari 12+, Edge 79+
-
 ## 🎨 Customization
 
 Edit `index.html` to customize:
@@ -75,21 +52,6 @@ Edit `index.html` to customize:
 - **Stats Displayed**: Update the `statsToShow` array
 - **Search Behavior**: Adjust the `searchPlayers()` method
 - **Layout**: Change the grid and responsive breakpoints
-
-## 🐛 Troubleshooting
-
-**"Failed to load JSON" Error**:
-- Make sure you're using http://localhost:8000 (not file://)
-- Check that `Prospect stats.json` is in the same folder as `index.html`
-
-**Search Not Working**:
-- Ensure the JSON has a `player` field for each prospect
-- Check browser console for errors
-- Try refreshing the page
-
-**Performance Issues**:
-- The app handles 6.5MB efficiently, but very large datasets (>50MB) may need optimization
-- Use browser dev tools to monitor memory usage
 
 ## 📈 Data Structure
 
@@ -118,9 +80,3 @@ Your JSON contains prospect objects with:
   ]
 }
 ```
-
-## 🤝 Sharing
-
-Share this link with your team: **https://dahldoescards.github.io/prospect-stats-dashboard**
-
-Perfect for scouts, analysts, and anyone who needs quick access to prospect statistics!
