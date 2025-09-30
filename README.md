@@ -1,51 +1,51 @@
-# 🏟️ Prospect Stats Dashboard
+# Prospect Stats Dashboard
 
 A beautiful, fast web application for searching and exploring comprehensive prospect statistics across all seasons and levels.
 
-## ✨ Features
+## Features
 
-- 🔍 **Smart Search**: Exact name matching with fuzzy fallback
-- 📊 **Complete Stats**: All seasons and levels for each prospect
-- 📱 **Responsive Design**: Works perfectly on desktop and mobile
-- ⚡ **Lightning Fast**: Client-side search with no server required
-- 🎨 **Beautiful UI**: Modern, professional design
+- **Smart Search**: Exact name matching with fuzzy fallback
+- **Complete Stats**: All seasons and levels for each prospect
+- **Responsive Design**: Works perfectly on desktop and mobile
+- **Lightning Fast**: Client-side search with no server required
+- **Beautiful UI**: Modern, professional design
 
-## 🚀 Live Demo
+## Live Demo
 
 **Your site will be live at**: https://dahldoescards.github.io/prospect-stats-dashboard
 
-## 📁 Files
+## Files
 
 - `index.html` - The main web application
 - `Prospect stats.json` - Your complete prospect data (6.5MB, 333K+ lines)
 - `README.md` - This documentation
 
-## 🔍 How to Use
+## How to Use
 
 1. **Search by exact name**: Type "Sheng-En Lin" → Shows only that player
 2. **Search by partial name**: Type "Juan" → Shows all players with "Juan" in their name
 3. **View all seasons**: Each player shows all their seasons sorted newest first
 4. **See key stats**: Games, AVG, HR, RBI, OPS, ISO, wRC+, BB%, K%, SwStr%, pfxContact%, ERA, W-L, IP, FIP
 
-## 📊 Stats Displayed
+## Stats Displayed
 
-**Hitting Stats**: Games, AVG, HR, RBI, OPS, ISO, wRC+, BB%, K%, SwStr%, pfxContact%  
+**Hitting Stats**: Games, AVG, HR, RBI, OPS, ISO, wRC+, BB%, K%, SwStr%, pfxContact%
 **Pitching Stats**: ERA, W, L, IP, K%, BB%, FIP
 
-## 🎯 Search Behavior
+## Search Behavior
 
 - **Exact Match**: If you type the exact player name, only that player appears
 - **Fuzzy Search**: If no exact match, shows all similar/partial matches
 - **Real-time**: Search updates as you type (minimum 2 characters)
 
-## 🌐 Deployment
+## Deployment
 
 ### GitHub Pages (Current Setup)
 - Repository: https://github.com/dahldoescards/prospect-stats-dashboard
 - Live URL: https://dahldoescards.github.io/prospect-stats-dashboard
 - Auto-deploys when you push changes
 
-## 🎨 Customization
+## Customization
 
 Edit `index.html` to customize:
 - **Colors/Styling**: Modify the CSS variables
@@ -53,7 +53,7 @@ Edit `index.html` to customize:
 - **Search Behavior**: Adjust the `searchPlayers()` method
 - **Layout**: Change the grid and responsive breakpoints
 
-## 📈 Data Structure
+## Data Structure
 
 Your JSON contains prospect objects with:
 ```json
