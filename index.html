@@ -344,8 +344,8 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 1px;
-            background: rgba(52, 58, 64, 0.1);
+            width: 3px;
+            background: #ff0000;
             z-index: 1;
         }
 
@@ -973,8 +973,9 @@
                     }).join('');
 
                     // Create year boundary grid lines that align with the header
-                    const gridLines = years.slice(1).map(year => {
-                        const yearLeftPercent = ((year - minYear) / yearRange) * 100;
+                    // Use the same logic as the header: each year gets 1/3 of the width
+                    const gridLines = years.slice(1).map((year, index) => {
+                        const yearLeftPercent = ((index + 1) / years.length) * 100;
                         return `<div class="year-grid-line" style="left: ${yearLeftPercent}%;"></div>`;
                     }).join('');
 
