@@ -860,6 +860,21 @@
                     });
                 });
 
+                // Build per-year layouts proportional to games played
+                const yearLayouts = {};
+                years.forEach(year => {
+                    const segs = (yearSegments && yearSegments[year]) ? [...yearSegments[year]] : [];
+                    segs.sort((a,b) => (a._order||0) - (b._order||0));
+                    const totalGames = Math.max(1, segs.reduce((sum, s) => sum + Number(s.games || 0), 0));
+                    let accGames = 0;
+                    yearLayouts[year] = segs.map(s => {
+                        const leftPct = (accGames / totalGames) * 100;
+                        const widthPct = (Number(s.games || 0) / totalGames) * 100;
+                        accGames += Number(s.games || 0);
+                        return { ...s, _leftPct: leftPct, _widthPct: widthPct };
+                    });
+                });
+
                 // Calculate horizontal stagger offsets for each level in each year
                 const getStaggerOffset = (level, year) => {
                     const activeLevels = yearLevelMap[year];
@@ -897,21 +912,17 @@
                         const yearWidthPercent = (1 / yearRange) * 100;
                         const staggerOffset = getStaggerOffset(level, year);
 
-                        // Within the year, if multiple stints exist for this level-year, split the width equally
-                        // Group stints by exact season/year to avoid cross-year splitting
-                        // Use global chronological segments per year so cross-level order is correct
-                        const segments = (yearSegments && yearSegments[year]) ? yearSegments[year] : [];
-                        const stintCount = segments.length || 1;
+                        // Use per-year proportional layout by games, preserving chronological order
+                        const segments = yearLayouts[year] || [];
                         const innerBars = segments
-                            .map((seg, idx) => ({ seg, idx }))
-                            .filter(x => x.seg.level === level)
-                            .map(({seg, idx}) => {
+                            .filter(seg => seg.level === level)
+                            .map(seg => {
                                 const teams = (seg.team || '').toString();
                                 const totalGames = Number(seg.games || 0);
-                                const order = typeof seg._order === 'number' ? seg._order : idx;
-                                const sliceLeft = (order / stintCount) * yearWidthPercent;
-                                const finalLeft = yearLeftPercent + sliceLeft; // no level-based staggering now
-                                const finalWidth = (1 / stintCount) * yearWidthPercent;
+                                const finalLeft = yearLeftPercent + (yearWidthPercent * (seg._leftPct || 0) / 100);
+                                const computedWidth = yearWidthPercent * ((seg._widthPct || 0) / 100);
+                                const minWidthPct = 0.8; // ensure visibility for very short stints
+                                const finalWidth = Math.max(minWidthPct, computedWidth);
                             return `
                                 <div class="level-bar ${colorClass} ${hasOverlaps ? 'staggered' : ''}" 
                                      style="left: ${finalLeft}%; width: ${finalWidth}%;"
