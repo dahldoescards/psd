@@ -866,7 +866,7 @@
                     const segs = (yearSegments && yearSegments[year]) ? [...yearSegments[year]] : [];
                     segs.sort((a,b) => (a._order||0) - (b._order||0));
                     const totalGames = Math.max(1, segs.reduce((sum, s) => sum + Number(s.games || 0), 0));
-                    const gapPct = 1.0; // gap between stints (as % of year width)
+                    const gapPct = 2.0; // larger gap between stints (as % of year width)
                     const effectiveWidthPct = Math.max(0, 100 - gapPct * Math.max(0, segs.length - 1));
                     let accPct = 0;
                     yearLayouts[year] = segs.map(s => {
@@ -919,11 +919,16 @@
                             const segWidthPct = Math.max(0, Math.min(100 - segLeftPct, seg._widthPct || 0));
                             const finalLeft = yearLeftPercent + (yearWidthPercent * segLeftPct / 100);
                             const computedWidth = yearWidthPercent * (segWidthPct / 100);
-                            const minWidthPct = 2.0; // stronger floor for readability
-                            const finalWidth = Math.max(minWidthPct, computedWidth);
+                            const minWidthPct = 3.0; // stronger floor for readability
+                            let finalWidth = Math.max(minWidthPct, computedWidth);
+                            // Clamp to the right boundary of this year
+                            const yearRight = yearLeftPercent + yearWidthPercent;
+                            if (finalLeft + finalWidth > yearRight) {
+                                finalWidth = Math.max(minWidthPct, yearRight - finalLeft);
+                            }
                             return `
                                 <div class="level-bar ${colorClass}"
-                                     style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 28px;"
+                                     style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 36px;"
                                      title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${games} games">
                                     ${games || ''}
                                 </div>
