@@ -910,13 +910,14 @@
                     `;
                 }).join('');
 
+                // Create ONE row per level, with stints positioned chronologically
                 const levelRows = sortedLevels.map(level => {
                     const colorClass = levelColors[level] || 'level-unknown';
                     
                     // Get stints for this level only
                     const levelStints = allStints.filter(stint => stint.level === level);
                     
-                    // Create bars for this level, positioned chronologically
+                    // Position each stint based on its chronological order in the overall timeline
                     const bars = levelStints.map(stint => {
                         const chronologicalIndex = allStints.findIndex(s => s === stint);
                         const position = (chronologicalIndex * (stintWidth + gapWidth)) + 5;
