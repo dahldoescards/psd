@@ -910,21 +910,50 @@
                     `;
                 }).join('');
 
-                // Create ONE row per level, with stints positioned chronologically
+                // Create ONE row per level, with stints positioned chronologically and properly spaced
                 const levelRows = sortedLevels.map(level => {
                     const colorClass = levelColors[level] || 'level-unknown';
                     
                     // Get stints for this level only
                     const levelStints = allStints.filter(stint => stint.level === level);
                     
-                    // Position each stint based on its chronological order in the overall timeline
-                    const bars = levelStints.map(stint => {
+                    // Position each stint based on its chronological order, but within year constraints
+                    const bars = levelStints.map((stint, levelIndex) => {
                         const chronologicalIndex = allStints.findIndex(s => s === stint);
-                        const position = (chronologicalIndex * (stintWidth + gapWidth)) + 5;
+                        const year = stint.year;
+                        
+                        // Calculate year boundaries
+                        const minYear = Math.min(...years);
+                        const maxYear = Math.max(...years);
+                        const yearRange = maxYear - minYear + 1;
+                        const yearLeftPercent = ((year - minYear) / yearRange) * 100;
+                        const yearWidthPercent = (1 / yearRange) * 100;
+                        
+                        // For multiple stints in same level/year, space them horizontally within the year
+                        const stintsInSameYearLevel = levelStints.filter(s => s.year === year);
+                        const stintIndexInYear = stintsInSameYearLevel.indexOf(stint);
+                        
+                        let position;
+                        if (stintsInSameYearLevel.length === 1) {
+                            // Single stint - center it in the year
+                            position = yearLeftPercent + (yearWidthPercent / 2) - (stintWidth / 2);
+                        } else {
+                            // Multiple stints - space them evenly within the year
+                            const gap = yearWidthPercent * 0.02; // 2% gap
+                            const availableWidth = yearWidthPercent - (gap * (stintsInSameYearLevel.length - 1));
+                            const adjustedStintWidth = Math.min(stintWidth, availableWidth / stintsInSameYearLevel.length);
+                            const spacing = adjustedStintWidth + gap;
+                            
+                            position = yearLeftPercent + (stintIndexInYear * spacing) + 2; // 2% margin
+                        }
+                        
+                        // Ensure bar stays within year boundaries
+                        const clampedPosition = Math.max(yearLeftPercent + 1, Math.min(yearLeftPercent + yearWidthPercent - stintWidth - 1, position));
+                        const clampedWidth = Math.min(stintWidth, yearLeftPercent + yearWidthPercent - 1 - clampedPosition);
                         
                         return `
                             <div class="level-bar ${colorClass}"
-                                 style="left: ${position}%; width: ${stintWidth}%;"
+                                 style="left: ${clampedPosition}%; width: ${clampedWidth}%;"
                                  title="${stint.year} - ${stint.level}${stint.team ? ' (' + stint.team + ')' : ''} - ${stint.games} games - Started: ${stint.start_date}">
                                 ${stint.games}
                             </div>
