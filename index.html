@@ -866,12 +866,19 @@
                     const segs = (yearSegments && yearSegments[year]) ? [...yearSegments[year]] : [];
                     segs.sort((a,b) => (a._order||0) - (b._order||0));
                     const totalGames = Math.max(1, segs.reduce((sum, s) => sum + Number(s.games || 0), 0));
-                    let accGames = 0;
+                    const gapPct = 1.0; // gap between stints (as % of year width)
+                    const effectiveWidthPct = Math.max(0, 100 - gapPct * Math.max(0, segs.length - 1));
+                    let accPct = 0;
                     yearLayouts[year] = segs.map(s => {
-                        const leftPct = (accGames / totalGames) * 100;
-                        const widthPct = (Number(s.games || 0) / totalGames) * 100;
-                        accGames += Number(s.games || 0);
-                        return { ...s, _leftPct: leftPct, _widthPct: widthPct };
+                        const portion = (Number(s.games || 0) / totalGames);
+                        const widthPct = portion * effectiveWidthPct;
+                        const leftPct = accPct;
+                        accPct += widthPct + gapPct;
+                        // Clamp just in case of rounding
+                        const clampedLeft = Math.max(0, Math.min(100, leftPct));
+                        const maxWidth = Math.max(0, 100 - clampedLeft);
+                        const clampedWidth = Math.max(0, Math.min(widthPct, maxWidth));
+                        return { ...s, _leftPct: clampedLeft, _widthPct: clampedWidth };
                     });
                 });
 
@@ -908,13 +915,15 @@
                         const innerBars = segments.map(seg => {
                             const teams = (seg.team || '').toString();
                             const games = Number(seg.games || 0);
-                            const finalLeft = yearLeftPercent + (yearWidthPercent * (seg._leftPct || 0) / 100);
-                            const computedWidth = yearWidthPercent * ((seg._widthPct || 0) / 100);
-                            const minWidthPct = 1.0; // ensure visibility but keep proportion
+                            const segLeftPct = Math.max(0, Math.min(100, seg._leftPct || 0));
+                            const segWidthPct = Math.max(0, Math.min(100 - segLeftPct, seg._widthPct || 0));
+                            const finalLeft = yearLeftPercent + (yearWidthPercent * segLeftPct / 100);
+                            const computedWidth = yearWidthPercent * (segWidthPct / 100);
+                            const minWidthPct = 2.0; // stronger floor for readability
                             const finalWidth = Math.max(minWidthPct, computedWidth);
                             return `
                                 <div class="level-bar ${colorClass}"
-                                     style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 18px;"
+                                     style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 28px;"
                                      title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${games} games">
                                     ${games || ''}
                                 </div>
