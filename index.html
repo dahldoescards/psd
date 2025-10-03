@@ -902,29 +902,18 @@
 
                         const yearLeftPercent = ((year - minYear) / yearRange) * 100;
                         const yearWidthPercent = (1 / yearRange) * 100;
-                        const { laneLeft, laneWidth } = getLaneFor(level, year);
 
-                        // Stints for this specific level-year, ordered chronologically
-                        const stints = (levelStats
-                            .filter(s => s.year === year)
-                            .slice()
-                            .sort((a,b) => (a.start_date||'').localeCompare(b.start_date||'')));
-
-                        const totalGames = Math.max(1, stints.reduce((sum, s) => sum + Number(s.games || 0), 0));
-                        let accGames = 0;
-                        const innerBars = stints.map(seg => {
+                        // Use global per-year layout so widths are proportional to total games in that year
+                        const segments = (yearLayouts[year] || []).filter(seg => seg.level === level);
+                        const innerBars = segments.map(seg => {
                             const teams = (seg.team || '').toString();
                             const games = Number(seg.games || 0);
-                            const segLeftPctWithinLane = (accGames / totalGames) * laneWidth;
-                            const segWidthPctWithinLane = (games / totalGames) * laneWidth;
-                            accGames += games;
-
-                            const finalLeft = yearLeftPercent + (yearWidthPercent * (laneLeft + segLeftPctWithinLane) / 100);
-                            const computedWidth = yearWidthPercent * (segWidthPctWithinLane / 100);
-                            const minWidthPct = 1.2; // smaller floor, but visible
+                            const finalLeft = yearLeftPercent + (yearWidthPercent * (seg._leftPct || 0) / 100);
+                            const computedWidth = yearWidthPercent * ((seg._widthPct || 0) / 100);
+                            const minWidthPct = 1.0; // ensure visibility but keep proportion
                             const finalWidth = Math.max(minWidthPct, computedWidth);
                             return `
-                                <div class="level-bar ${colorClass}" 
+                                <div class="level-bar ${colorClass}"
                                      style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 18px;"
                                      title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${games} games">
                                     ${games || ''}
