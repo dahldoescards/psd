@@ -258,6 +258,135 @@
             border: 1px solid #f5c6cb;
         }
 
+        /* Gantt Chart Timeline Styles */
+        .timeline-container {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        .timeline-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .gantt-chart {
+            position: relative;
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+
+        .gantt-years {
+            display: flex;
+            position: relative;
+            margin-bottom: 10px;
+            min-width: 100%;
+        }
+
+        .gantt-year {
+            flex: 1;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #6c757d;
+            padding: 5px;
+            border-right: 1px solid #dee2e6;
+            position: relative;
+        }
+
+        .gantt-year:last-child {
+            border-right: none;
+        }
+
+        .gantt-levels {
+            position: relative;
+            min-height: 200px;
+        }
+
+        .level-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            min-height: 24px;
+        }
+
+        .level-label {
+            width: 80px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #495057;
+            text-align: right;
+            padding-right: 10px;
+            flex-shrink: 0;
+        }
+
+        .level-timeline {
+            flex: 1;
+            position: relative;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .level-bar {
+            position: absolute;
+            height: 100%;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .level-bar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Level-specific colors */
+        .level-mlb { background: linear-gradient(135deg, #28a745, #20c997); }
+        .level-aaa { background: linear-gradient(135deg, #007bff, #6610f2); }
+        .level-aa { background: linear-gradient(135deg, #6f42c1, #e83e8c); }
+        .level-a-plus { background: linear-gradient(135deg, #fd7e14, #ffc107); }
+        .level-a { background: linear-gradient(135deg, #dc3545, #fd7e14); }
+        .level-cpx { background: linear-gradient(135deg, #6c757d, #adb5bd); }
+        .level-dsl { background: linear-gradient(135deg, #495057, #6c757d); }
+        .level-r { background: linear-gradient(135deg, #343a40, #495057); }
+        .level-unknown { background: linear-gradient(135deg, #6c757d, #adb5bd); }
+
+        .timeline-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            margin-right: 5px;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 2rem;
@@ -520,16 +649,157 @@
                 `;
             }
 
+            generateTimelineData(stats) {
+                if (!stats || stats.length === 0) return null;
+
+                // Sort stats by season (earliest first)
+                const sortedStats = [...stats].sort((a, b) => {
+                    const yearA = parseInt(a.Season) || 0;
+                    const yearB = parseInt(b.Season) || 0;
+                    return yearA - yearB;
+                });
+
+                // Get all unique years
+                const years = [...new Set(sortedStats.map(stat => parseInt(stat.Season) || 0))].sort();
+                if (years.length === 0) return null;
+
+                // Define level hierarchy and colors
+                const levelHierarchy = {
+                    'MLB': 1,
+                    'AAA': 2,
+                    'AA': 3,
+                    'A+': 4,
+                    'A': 5,
+                    'CPX': 6,
+                    'DSL': 7,
+                    'R': 8
+                };
+
+                const levelColors = {
+                    'MLB': 'level-mlb',
+                    'AAA': 'level-aaa',
+                    'AA': 'level-aa',
+                    'A+': 'level-a-plus',
+                    'A': 'level-a',
+                    'CPX': 'level-cpx',
+                    'DSL': 'level-dsl',
+                    'R': 'level-r'
+                };
+
+                // Group stats by level
+                const levelData = {};
+                sortedStats.forEach(stat => {
+                    const level = stat.llevel || 'Unknown';
+                    const year = parseInt(stat.Season) || 0;
+                    
+                    if (!levelData[level]) {
+                        levelData[level] = [];
+                    }
+                    levelData[level].push({
+                        year: year,
+                        team: stat.Team || '',
+                        games: stat.G || 0,
+                        level: level
+                    });
+                });
+
+                return {
+                    years: years,
+                    levelData: levelData,
+                    levelHierarchy: levelHierarchy,
+                    levelColors: levelColors
+                };
+            }
+
+            renderTimeline(timelineData) {
+                if (!timelineData) return '';
+
+                const { years, levelData, levelHierarchy, levelColors } = timelineData;
+                
+                // Sort levels by hierarchy
+                const sortedLevels = Object.keys(levelData).sort((a, b) => {
+                    const levelA = levelHierarchy[a] || 999;
+                    const levelB = levelHierarchy[b] || 999;
+                    return levelA - levelB;
+                });
+
+                const minYear = Math.min(...years);
+                const maxYear = Math.max(...years);
+                const yearRange = maxYear - minYear + 1;
+
+                const levelRows = sortedLevels.map(level => {
+                    const levelStats = levelData[level];
+                    const colorClass = levelColors[level] || 'level-unknown';
+                    
+                    // Create bars for each year this level was played
+                    const bars = years.map(year => {
+                        const yearStats = levelStats.filter(stat => stat.year === year);
+                        if (yearStats.length === 0) return '';
+
+                        const totalGames = yearStats.reduce((sum, stat) => sum + (stat.games || 0), 0);
+                        const teams = [...new Set(yearStats.map(stat => stat.team))].filter(t => t);
+                        const teamText = teams.length > 0 ? teams.join(', ') : '';
+                        
+                        const leftPercent = ((year - minYear) / yearRange) * 100;
+                        const widthPercent = (1 / yearRange) * 100;
+
+                        return `
+                            <div class="level-bar ${colorClass}" 
+                                 style="left: ${leftPercent}%; width: ${widthPercent}%;"
+                                 title="${year} - ${level}${teamText ? ' (' + teamText + ')' : ''} - ${totalGames} games">
+                                ${year}
+                            </div>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="level-row">
+                            <div class="level-label">${level}</div>
+                            <div class="level-timeline">
+                                ${bars}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                const legend = Object.entries(levelColors).map(([level, colorClass]) => `
+                    <div class="legend-item">
+                        <div class="legend-color ${colorClass}"></div>
+                        <span>${level}</span>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="timeline-container">
+                        <div class="timeline-title">Level Progression Timeline</div>
+                        <div class="gantt-chart">
+                            <div class="gantt-years">
+                                ${years.map(year => `<div class="gantt-year">${year}</div>`).join('')}
+                            </div>
+                            <div class="gantt-levels">
+                                ${levelRows}
+                            </div>
+                        </div>
+                        <div class="timeline-legend">
+                            ${legend}
+                        </div>
+                    </div>
+                `;
+            }
+
             renderPlayerCard(player) {
                 const stats = player.stats || [];
                 const scoutGrades = this.findScoutGrades(player.player);
                 
-                // Sort stats by season (newest first)
+                // Sort stats by season (earliest first)
                 const sortedStats = [...stats].sort((a, b) => {
                     const yearA = parseInt(a.Season) || 0;
                     const yearB = parseInt(b.Season) || 0;
-                    return yearB - yearA;
+                    return yearA - yearB;
                 });
+
+                // Generate timeline data
+                const timelineData = this.generateTimelineData(stats);
 
                 return `
                     <div class="player-card">
@@ -546,6 +816,7 @@
                             ${this.renderScoutGrades(scoutGrades)}
                         </div>
                         <div class="stats-container">
+                            ${timelineData ? this.renderTimeline(timelineData) : ''}
                             ${sortedStats.map(stat => this.renderSeasonStats(stat)).join('')}
                         </div>
                     </div>
