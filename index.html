@@ -911,33 +911,22 @@
                     // Get stints for this level only
                     const levelStints = allStints.filter(stint => stint.level === level);
                     
-                    // Position each stint based on its chronological order across ALL stints
+                    // Position each stint based on its chronological order - SIMPLE APPROACH
                     const bars = levelStints.map((stint, levelIndex) => {
                         // Find this stint's position in the overall chronological order
                         const chronologicalIndex = allStints.findIndex(s => s === stint);
                         
-                        // Calculate position based on chronological order
+                        // Simple positioning: each stint gets equal space across timeline
                         const totalStints = allStints.length;
-                        const timelineWidth = 90; // Use 90% of timeline width
-                        const stintWidth = Math.max(4, timelineWidth / totalStints); // Width based on total stints
-                        const gap = Math.max(2, stintWidth * 0.2); // Gap between stints
-                        const spacing = stintWidth + gap;
+                        const stintWidth = 8; // Fixed width
+                        const spacing = 12; // Fixed spacing
                         
                         // Position based on chronological order
-                        const position = 5 + (chronologicalIndex * spacing); // Start at 5% margin
-                        
-                        // Calculate year boundaries for clamping
-                        const year = stint.year;
-                        const yearLeftPercent = ((year - minYear) / yearRange) * 100;
-                        const yearRightPercent = yearLeftPercent + yearWidthPercent;
-                        
-                        // Clamp position to stay within year boundaries
-                        const clampedPosition = Math.max(yearLeftPercent + 1, Math.min(yearRightPercent - stintWidth - 1, position));
-                        const clampedWidth = Math.min(stintWidth, yearRightPercent - 1 - clampedPosition);
+                        const position = 5 + (chronologicalIndex * spacing);
                         
                         return `
                             <div class="level-bar ${colorClass}"
-                                 style="left: ${clampedPosition}%; width: ${clampedWidth}%;"
+                                 style="left: ${position}%; width: ${stintWidth}%;"
                                  title="${stint.year} - ${stint.level}${stint.team ? ' (' + stint.team + ')' : ''} - ${stint.games} games - Started: ${stint.start_date}">
                                 ${stint.games}
                             </div>
