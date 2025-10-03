@@ -914,8 +914,9 @@
                 };
 
                 // Create year boundary grid lines that align with the header (once, outside the level loop)
-                const gridLines = years.slice(1).map((year, index) => {
-                    const yearLeftPercent = ((index + 1) / years.length) * 100;
+                // Use the EXACT same calculation as the bars for perfect alignment
+                const gridLines = years.slice(1).map(year => {
+                    const yearLeftPercent = ((year - minYear) / yearRange) * 100;
                     return `<div class="year-grid-line" style="left: ${yearLeftPercent}%;"></div>`;
                 }).join('');
 
