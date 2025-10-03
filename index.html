@@ -313,6 +313,11 @@
             align-items: center;
             margin-bottom: 8px;
             min-height: 24px;
+            position: relative;
+        }
+
+        .level-row.staggered {
+            margin-bottom: 4px;
         }
 
         .level-label {
@@ -727,9 +732,35 @@
                 const maxYear = Math.max(...years);
                 const yearRange = maxYear - minYear + 1;
 
+                // Create a map to track which levels are active in each year
+                const yearLevelMap = {};
+                years.forEach(year => {
+                    yearLevelMap[year] = [];
+                    sortedLevels.forEach(level => {
+                        const levelStats = levelData[level];
+                        const yearStats = levelStats.filter(stat => stat.year === year);
+                        if (yearStats.length > 0) {
+                            yearLevelMap[year].push(level);
+                        }
+                    });
+                });
+
+                // Calculate stagger offsets for each level in each year
+                const getStaggerOffset = (level, year) => {
+                    const activeLevels = yearLevelMap[year];
+                    const levelIndex = activeLevels.indexOf(level);
+                    return levelIndex * 2; // 2px offset per level
+                };
+
                 const levelRows = sortedLevels.map(level => {
                     const levelStats = levelData[level];
                     const colorClass = levelColors[level] || 'level-unknown';
+                    
+                    // Check if this level has any overlapping years with other levels
+                    const hasOverlaps = years.some(year => {
+                        const yearStats = levelStats.filter(stat => stat.year === year);
+                        return yearStats.length > 0 && yearLevelMap[year].length > 1;
+                    });
                     
                     // Create bars for each year this level was played
                     const bars = years.map(year => {
@@ -742,10 +773,11 @@
                         
                         const leftPercent = ((year - minYear) / yearRange) * 100;
                         const widthPercent = (1 / yearRange) * 100;
+                        const staggerOffset = getStaggerOffset(level, year);
 
                         return `
                             <div class="level-bar ${colorClass}" 
-                                 style="left: ${leftPercent}%; width: ${widthPercent}%;"
+                                 style="left: ${leftPercent}%; width: ${widthPercent}%; top: ${staggerOffset}px;"
                                  title="${year} - ${level}${teamText ? ' (' + teamText + ')' : ''} - ${totalGames} games">
                                 ${year}
                             </div>
@@ -753,7 +785,7 @@
                     }).join('');
 
                     return `
-                        <div class="level-row">
+                        <div class="level-row ${hasOverlaps ? 'staggered' : ''}">
                             <div class="level-label">${level}</div>
                             <div class="level-timeline">
                                 ${bars}
