@@ -875,22 +875,14 @@
                     });
                 });
 
-                // Calculate horizontal stagger offsets for each level in each year
-                const getStaggerOffset = (level, year) => {
+                // Helper to compute per-year lane (level band) offsets in percent
+                const getLaneFor = (level, year) => {
                     const activeLevels = yearLevelMap[year];
-                    const levelIndex = activeLevels.indexOf(level);
-                    const totalLevels = activeLevels.length;
-                    
-                    if (totalLevels <= 1) return { left: 0, width: 100 };
-                    
-                    // Stagger horizontally: left to right, with highest level on the right
-                    const staggerWidth = 100 / totalLevels; // Each level gets equal width
-                    const leftOffset = levelIndex * staggerWidth;
-                    
-                    return { 
-                        left: leftOffset, 
-                        width: staggerWidth 
-                    };
+                    const laneIndex = Math.max(0, activeLevels.indexOf(level));
+                    const total = Math.max(1, activeLevels.length);
+                    const laneWidth = 100 / total;
+                    const laneLeft = laneIndex * laneWidth;
+                    return { laneLeft, laneWidth };
                 };
 
                 const levelRows = sortedLevels.map(level => {
@@ -910,24 +902,32 @@
 
                         const yearLeftPercent = ((year - minYear) / yearRange) * 100;
                         const yearWidthPercent = (1 / yearRange) * 100;
-                        const staggerOffset = getStaggerOffset(level, year);
+                        const { laneLeft, laneWidth } = getLaneFor(level, year);
 
-                        // Use per-year proportional layout by games, preserving chronological order
-                        const segments = yearLayouts[year] || [];
-                        const innerBars = segments
-                            .filter(seg => seg.level === level)
-                            .map(seg => {
-                                const teams = (seg.team || '').toString();
-                                const totalGames = Number(seg.games || 0);
-                                const finalLeft = yearLeftPercent + (yearWidthPercent * (seg._leftPct || 0) / 100);
-                                const computedWidth = yearWidthPercent * ((seg._widthPct || 0) / 100);
-                                const minWidthPct = 2.8; // ensure visibility for very short stints (bigger floor)
-                                const finalWidth = Math.max(minWidthPct, computedWidth);
+                        // Stints for this specific level-year, ordered chronologically
+                        const stints = (levelStats
+                            .filter(s => s.year === year)
+                            .slice()
+                            .sort((a,b) => (a.start_date||'').localeCompare(b.start_date||'')));
+
+                        const totalGames = Math.max(1, stints.reduce((sum, s) => sum + Number(s.games || 0), 0));
+                        let accGames = 0;
+                        const innerBars = stints.map(seg => {
+                            const teams = (seg.team || '').toString();
+                            const games = Number(seg.games || 0);
+                            const segLeftPctWithinLane = (accGames / totalGames) * laneWidth;
+                            const segWidthPctWithinLane = (games / totalGames) * laneWidth;
+                            accGames += games;
+
+                            const finalLeft = yearLeftPercent + (yearWidthPercent * (laneLeft + segLeftPctWithinLane) / 100);
+                            const computedWidth = yearWidthPercent * (segWidthPctWithinLane / 100);
+                            const minWidthPct = 1.2; // smaller floor, but visible
+                            const finalWidth = Math.max(minWidthPct, computedWidth);
                             return `
-                                <div class="level-bar ${colorClass} ${hasOverlaps ? 'staggered' : ''}" 
-                                         style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 24px;"
-                                     title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${totalGames} games">
-                                    ${totalGames || ''}
+                                <div class="level-bar ${colorClass}" 
+                                     style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 18px;"
+                                     title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${games} games">
+                                    ${games || ''}
                                 </div>
                             `;
                         }).join('');
