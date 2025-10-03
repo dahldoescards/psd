@@ -295,8 +295,9 @@
             font-weight: 600;
             color: #6c757d;
             padding: 5px;
-            border-right: 1px solid #dee2e6;
+            border-right: 2px solid #343a40;
             position: relative;
+            background: linear-gradient(90deg, transparent 0%, rgba(52, 58, 64, 0.05) 50%, transparent 100%);
         }
 
         .gantt-year:last-child {
@@ -339,6 +340,25 @@
             overflow: hidden;
         }
 
+        .level-timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent 0px,
+                transparent calc(33.333% - 1px),
+                rgba(52, 58, 64, 0.1) 33.333%,
+                rgba(52, 58, 64, 0.1) calc(33.333% + 1px),
+                transparent calc(33.333% + 2px)
+            );
+            pointer-events: none;
+            z-index: 0;
+        }
+
         .level-bar {
             position: absolute;
             height: 100%;
@@ -352,7 +372,8 @@
             text-shadow: 0 1px 2px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
             cursor: pointer;
-            z-index: 1;
+            z-index: 2;
+            box-sizing: border-box;
         }
 
         .level-bar.staggered {
@@ -866,15 +887,24 @@
                     const segs = (yearSegments && yearSegments[year]) ? [...yearSegments[year]] : [];
                     segs.sort((a,b) => (a._order||0) - (b._order||0));
                     const totalGames = Math.max(1, segs.reduce((sum, s) => sum + Number(s.games || 0), 0));
-                    const gapPct = 2.0; // larger gap between stints (as % of year width)
+                    
+                    // Calculate minimum width based on total games in year to ensure small counts are visible
+                    const minWidthPct = Math.max(8.0, Math.min(15.0, 100 / Math.max(1, segs.length))); // 8-15% minimum
+                    
+                    const gapPct = 1.0; // smaller gap between stints
                     const effectiveWidthPct = Math.max(0, 100 - gapPct * Math.max(0, segs.length - 1));
                     let accPct = 0;
                     yearLayouts[year] = segs.map(s => {
                         const portion = (Number(s.games || 0) / totalGames);
-                        const widthPct = portion * effectiveWidthPct;
+                        let widthPct = portion * effectiveWidthPct;
+                        
+                        // Ensure minimum width for visibility
+                        widthPct = Math.max(minWidthPct, widthPct);
+                        
                         const leftPct = accPct;
                         accPct += widthPct + gapPct;
-                        // Clamp just in case of rounding
+                        
+                        // Clamp to ensure we don't exceed year boundaries
                         const clampedLeft = Math.max(0, Math.min(100, leftPct));
                         const maxWidth = Math.max(0, 100 - clampedLeft);
                         const clampedWidth = Math.max(0, Math.min(widthPct, maxWidth));
@@ -917,18 +947,31 @@
                             const games = Number(seg.games || 0);
                             const segLeftPct = Math.max(0, Math.min(100, seg._leftPct || 0));
                             const segWidthPct = Math.max(0, Math.min(100 - segLeftPct, seg._widthPct || 0));
+                            
+                            // Calculate position within the year segment
                             const finalLeft = yearLeftPercent + (yearWidthPercent * segLeftPct / 100);
                             const computedWidth = yearWidthPercent * (segWidthPct / 100);
-                            const minWidthPct = 3.0; // stronger floor for readability
+                            
+                            // Ensure minimum width for visibility (in pixels, not percentage)
+                            const minWidthPx = 40; // minimum 40px width
+                            const yearWidthPx = yearWidthPercent * (window.innerWidth * 0.8) / 100; // approximate year width in pixels
+                            const minWidthPct = (minWidthPx / yearWidthPx) * 100;
+                            
                             let finalWidth = Math.max(minWidthPct, computedWidth);
-                            // Clamp to the right boundary of this year
+                            
+                            // STRICT year boundary enforcement
                             const yearRight = yearLeftPercent + yearWidthPercent;
                             if (finalLeft + finalWidth > yearRight) {
                                 finalWidth = Math.max(minWidthPct, yearRight - finalLeft);
                             }
+                            
+                            // Double-check we don't go outside year boundaries
+                            const clampedLeft = Math.max(yearLeftPercent, Math.min(yearRight - finalWidth, finalLeft));
+                            const clampedWidth = Math.max(minWidthPct, Math.min(yearRight - clampedLeft, finalWidth));
+                            
                             return `
                                 <div class="level-bar ${colorClass}"
-                                     style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 36px;"
+                                     style="left: ${clampedLeft}%; width: ${clampedWidth}%; min-width: 40px;"
                                      title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${games} games">
                                     ${games || ''}
                                 </div>
