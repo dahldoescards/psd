@@ -913,6 +913,12 @@
                     return { laneLeft, laneWidth };
                 };
 
+                // Create year boundary grid lines that align with the header (once, outside the level loop)
+                const gridLines = years.slice(1).map((year, index) => {
+                    const yearLeftPercent = ((index + 1) / years.length) * 100;
+                    return `<div class="year-grid-line" style="left: ${yearLeftPercent}%;"></div>`;
+                }).join('');
+
                 const levelRows = sortedLevels.map(level => {
                     const levelStats = levelData[level];
                     const colorClass = levelColors[level] || 'level-unknown';
@@ -970,13 +976,6 @@
                         }).join('');
 
                         return innerBars;
-                    }).join('');
-
-                    // Create year boundary grid lines that align with the header
-                    // Use the same logic as the header: each year gets 1/3 of the width
-                    const gridLines = years.slice(1).map((year, index) => {
-                        const yearLeftPercent = ((index + 1) / years.length) * 100;
-                        return `<div class="year-grid-line" style="left: ${yearLeftPercent}%;"></div>`;
                     }).join('');
 
                     return `
