@@ -891,24 +891,18 @@
                 // Sort ALL stints chronologically by start date
                 allStints.sort((a, b) => a.start_date.localeCompare(b.start_date));
 
-                // Create a single timeline that shows chronological progression
-                // Position each stint based on its chronological order
-                const totalStints = allStints.length;
-                const stintWidth = Math.max(4, 80 / totalStints); // Width based on number of stints
-                const gapWidth = Math.max(2, stintWidth * 0.3); // Gap between stints
+                // Calculate proper sizing for Gantt-style timeline
+                const minYear = Math.min(...years);
+                const maxYear = Math.max(...years);
+                const yearRange = maxYear - minYear + 1;
+                const yearWidthPercent = (1 / yearRange) * 100;
+                
+                // Size bars appropriately for year columns
+                const baseStintWidth = yearWidthPercent * 0.15; // 15% of year width
+                const minStintWidth = yearWidthPercent * 0.08; // 8% minimum
+                const maxStintWidth = yearWidthPercent * 0.25; // 25% maximum
 
-                const timelineBars = allStints.map((stint, index) => {
-                    const colorClass = levelColors[stint.level] || 'level-unknown';
-                    const position = (index * (stintWidth + gapWidth)) + 5; // Start at 5% margin
-                    
-                    return `
-                        <div class="level-bar ${colorClass}"
-                             style="left: ${position}%; width: ${stintWidth}%;"
-                             title="${stint.year} - ${stint.level}${stint.team ? ' (' + stint.team + ')' : ''} - ${stint.games} games - Started: ${stint.start_date}">
-                            ${stint.games}
-                        </div>
-                    `;
-                }).join('');
+                // Remove the old timelineBars code since we're using levelRows now
 
                 // Create ONE row per level, with stints positioned chronologically and properly spaced
                 const levelRows = sortedLevels.map(level => {
@@ -919,37 +913,44 @@
                     
                     // Position each stint based on its chronological order, but within year constraints
                     const bars = levelStints.map((stint, levelIndex) => {
-                        const chronologicalIndex = allStints.findIndex(s => s === stint);
                         const year = stint.year;
                         
                         // Calculate year boundaries
-                        const minYear = Math.min(...years);
-                        const maxYear = Math.max(...years);
-                        const yearRange = maxYear - minYear + 1;
                         const yearLeftPercent = ((year - minYear) / yearRange) * 100;
-                        const yearWidthPercent = (1 / yearRange) * 100;
                         
                         // For multiple stints in same level/year, space them horizontally within the year
                         const stintsInSameYearLevel = levelStints.filter(s => s.year === year);
                         const stintIndexInYear = stintsInSameYearLevel.indexOf(stint);
                         
+                        // Calculate appropriate width for this stint
+                        let stintWidth;
+                        if (stintsInSameYearLevel.length === 1) {
+                            // Single stint - use base width
+                            stintWidth = baseStintWidth;
+                        } else {
+                            // Multiple stints - divide year width appropriately
+                            const gap = yearWidthPercent * 0.03; // 3% gap between stints
+                            const availableWidth = yearWidthPercent - (gap * (stintsInSameYearLevel.length - 1));
+                            stintWidth = Math.max(minStintWidth, Math.min(maxStintWidth, availableWidth / stintsInSameYearLevel.length));
+                        }
+                        
+                        // Calculate position within the year
                         let position;
                         if (stintsInSameYearLevel.length === 1) {
                             // Single stint - center it in the year
                             position = yearLeftPercent + (yearWidthPercent / 2) - (stintWidth / 2);
                         } else {
                             // Multiple stints - space them evenly within the year
-                            const gap = yearWidthPercent * 0.02; // 2% gap
-                            const availableWidth = yearWidthPercent - (gap * (stintsInSameYearLevel.length - 1));
-                            const adjustedStintWidth = Math.min(stintWidth, availableWidth / stintsInSameYearLevel.length);
-                            const spacing = adjustedStintWidth + gap;
-                            
-                            position = yearLeftPercent + (stintIndexInYear * spacing) + 2; // 2% margin
+                            const gap = yearWidthPercent * 0.03; // 3% gap
+                            const spacing = stintWidth + gap;
+                            const startOffset = (yearWidthPercent - (spacing * stintsInSameYearLevel.length - gap)) / 2;
+                            position = yearLeftPercent + startOffset + (stintIndexInYear * spacing);
                         }
                         
-                        // Ensure bar stays within year boundaries
-                        const clampedPosition = Math.max(yearLeftPercent + 1, Math.min(yearLeftPercent + yearWidthPercent - stintWidth - 1, position));
-                        const clampedWidth = Math.min(stintWidth, yearLeftPercent + yearWidthPercent - 1 - clampedPosition);
+                        // Ensure bar stays within year boundaries with proper margins
+                        const margin = yearWidthPercent * 0.01; // 1% margin from year edges
+                        const clampedPosition = Math.max(yearLeftPercent + margin, Math.min(yearLeftPercent + yearWidthPercent - stintWidth - margin, position));
+                        const clampedWidth = Math.min(stintWidth, yearLeftPercent + yearWidthPercent - margin - clampedPosition);
                         
                         return `
                             <div class="level-bar ${colorClass}"
