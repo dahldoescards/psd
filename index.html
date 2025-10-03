@@ -891,21 +891,24 @@
                 // Sort ALL stints chronologically by start date
                 allStints.sort((a, b) => a.start_date.localeCompare(b.start_date));
 
-                const minYear = Math.min(...years);
-                const maxYear = Math.max(...years);
-                const totalDays = (maxYear - minYear + 1) * 365;
+                // Create a single timeline that shows chronological progression
+                // Position each stint based on its chronological order
+                const totalStints = allStints.length;
+                const stintWidth = Math.max(4, 80 / totalStints); // Width based on number of stints
+                const gapWidth = Math.max(2, stintWidth * 0.3); // Gap between stints
 
-                // Convert date to position across entire timeline
-                const dateToPosition = (dateStr) => {
-                    try {
-                        const date = new Date(dateStr);
-                        const startDate = new Date(minYear, 0, 1);
-                        const daysFromStart = Math.floor((date - startDate) / (1000 * 60 * 60 * 24));
-                        return Math.max(0, Math.min(100, (daysFromStart / totalDays) * 100));
-                    } catch (e) {
-                        return 50; // Default to middle
-                    }
-                };
+                const timelineBars = allStints.map((stint, index) => {
+                    const colorClass = levelColors[stint.level] || 'level-unknown';
+                    const position = (index * (stintWidth + gapWidth)) + 5; // Start at 5% margin
+                    
+                    return `
+                        <div class="level-bar ${colorClass}"
+                             style="left: ${position}%; width: ${stintWidth}%;"
+                             title="${stint.year} - ${stint.level}${stint.team ? ' (' + stint.team + ')' : ''} - ${stint.games} games - Started: ${stint.start_date}">
+                            ${stint.games}
+                        </div>
+                    `;
+                }).join('');
 
                 const levelRows = sortedLevels.map(level => {
                     const colorClass = levelColors[level] || 'level-unknown';
@@ -913,14 +916,14 @@
                     // Get stints for this level only
                     const levelStints = allStints.filter(stint => stint.level === level);
                     
-                    // Create one bar per stint - NO COMBINING
+                    // Create bars for this level, positioned chronologically
                     const bars = levelStints.map(stint => {
-                        const position = dateToPosition(stint.start_date);
-                        const width = Math.max(6, Math.min(12, stint.games * 0.2)); // Scale width with games
+                        const chronologicalIndex = allStints.findIndex(s => s === stint);
+                        const position = (chronologicalIndex * (stintWidth + gapWidth)) + 5;
                         
                         return `
                             <div class="level-bar ${colorClass}"
-                                 style="left: ${position}%; width: ${width}%;"
+                                 style="left: ${position}%; width: ${stintWidth}%;"
                                  title="${stint.year} - ${stint.level}${stint.team ? ' (' + stint.team + ')' : ''} - ${stint.games} games - Started: ${stint.start_date}">
                                 ${stint.games}
                             </div>
