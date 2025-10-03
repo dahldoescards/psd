@@ -334,10 +334,10 @@
         .level-timeline {
             flex: 1;
             position: relative;
-            height: 20px;
+            height: 32px;
             background: #e9ecef;
             border-radius: 10px;
-            overflow: hidden;
+            overflow: visible;
         }
 
         .year-grid-line {
@@ -352,8 +352,8 @@
 
         .level-bar {
             position: absolute;
-            height: 100%;
-            border-radius: 10px;
+            height: 16px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -365,6 +365,7 @@
             cursor: pointer;
             z-index: 2;
             box-sizing: border-box;
+            top: 8px;
         }
 
         .level-bar.staggered {
@@ -842,7 +843,7 @@
             renderTimeline(timelineData, progressionEntry = null) {
                 if (!timelineData) return '';
 
-                const { years, levelData, levelHierarchy, levelColors } = timelineData;
+                const { years, levelData, levelHierarchy, levelColors, yearSegments } = timelineData;
                 
                 // Sort levels by hierarchy
                 const sortedLevels = Object.keys(levelData).sort((a, b) => {
@@ -855,36 +856,89 @@
                 const maxYear = Math.max(...years);
                 const yearRange = maxYear - minYear + 1;
 
-                // Simplified approach: each year gets equal width, no overlapping
+                // Helper function to convert date to position within year
+                const dateToPosition = (dateStr, year) => {
+                    if (!dateStr) return 0.5; // Default to middle of year if no date
+                    
+                    try {
+                        const date = new Date(dateStr);
+                        if (isNaN(date.getTime())) return 0.5;
+                        
+                        // Get day of year (1-365/366)
+                        const startOfYear = new Date(year, 0, 1);
+                        const dayOfYear = Math.floor((date - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+                        const daysInYear = ((year % 4 === 0 && year % 100 !== 0) || year % 400 === 0) ? 366 : 365;
+                        
+                        return Math.max(0, Math.min(1, dayOfYear / daysInYear));
+                    } catch (e) {
+                        return 0.5; // Default to middle if parsing fails
+                    }
+                };
+
                 const levelRows = sortedLevels.map(level => {
-                    const levelStats = levelData[level];
                     const colorClass = levelColors[level] || 'level-unknown';
                     
                     // Create bars for each year this level was played
                     const bars = years.map(year => {
-                        const yearStats = levelStats.filter(stat => stat.year === year);
-                        if (yearStats.length === 0) return '';
-
-                        // Calculate year boundaries - each year gets equal width
                         const yearLeftPercent = ((year - minYear) / yearRange) * 100;
                         const yearWidthPercent = (1 / yearRange) * 100;
+                        
+                        // Get segments for this level and year from progression data
+                        let segments = [];
+                        if (progressionEntry && yearSegments && yearSegments[year]) {
+                            segments = yearSegments[year].filter(seg => seg.level === level);
+                        } else {
+                            // Fallback to stats data
+                            const yearStats = levelData[level].filter(stat => stat.year === year);
+                            if (yearStats.length > 0) {
+                                const totalGames = yearStats.reduce((sum, stat) => sum + (stat.games || 0), 0);
+                                const teams = yearStats.map(stat => stat.team).filter(Boolean).join(', ');
+                                segments = [{
+                                    games: totalGames,
+                                    team: teams,
+                                    start_date: `${year}-01-01`, // Default to start of year
+                                    level: level,
+                                    year: year
+                                }];
+                            }
+                        }
+                        
+                        if (segments.length === 0) return '';
 
-                        // For this level in this year, show a single bar spanning the full year width
-                        // If there are multiple stints, we'll show them as separate visual elements
-                        const totalGames = yearStats.reduce((sum, stat) => sum + (stat.games || 0), 0);
-                        const teams = yearStats.map(stat => stat.team).filter(Boolean).join(', ');
+                        // Sort segments by start date for proper staggering
+                        segments.sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
                         
-                        // Ensure the bar is strictly within year boundaries
-                        const barLeft = yearLeftPercent + 2; // Small margin from year start
-                        const barWidth = yearWidthPercent - 4; // Small margins on both sides
-                        
-                        return `
-                            <div class="level-bar ${colorClass}"
-                                 style="left: ${barLeft}%; width: ${barWidth}%;"
-                                 title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${totalGames} games">
-                                ${totalGames || ''}
-                            </div>
-                        `;
+                        // Create staggered bars for each segment
+                        const segmentBars = segments.map((segment, segmentIndex) => {
+                            const games = segment.games || 0;
+                            const teams = segment.team || '';
+                            const startDate = segment.start_date || '';
+                            
+                            // Calculate position within the year based on start date
+                            const yearPosition = dateToPosition(startDate, year);
+                            
+                            // For multiple segments in same year, stagger them vertically
+                            const staggerOffset = segments.length > 1 ? (segmentIndex * 4) : 0; // 4px stagger
+                            
+                            // Calculate bar width based on games (minimum 8% of year width)
+                            const minBarWidth = yearWidthPercent * 0.08;
+                            const maxBarWidth = yearWidthPercent * 0.4; // Max 40% of year width
+                            const gamesBasedWidth = Math.min(maxBarWidth, Math.max(minBarWidth, yearWidthPercent * 0.2));
+                            
+                            // Calculate bar position within year
+                            const barLeft = yearLeftPercent + (yearPosition * yearWidthPercent) - (gamesBasedWidth / 2);
+                            const clampedLeft = Math.max(yearLeftPercent + 2, Math.min(yearLeftPercent + yearWidthPercent - gamesBasedWidth - 2, barLeft));
+                            
+                            return `
+                                <div class="level-bar ${colorClass}"
+                                     style="left: ${clampedLeft}%; width: ${gamesBasedWidth}%; top: ${staggerOffset}px;"
+                                     title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${games} games${startDate ? ' - Started: ' + startDate : ''}">
+                                    ${games || ''}
+                                </div>
+                            `;
+                        }).join('');
+
+                        return segmentBars;
                     }).join('');
 
                     return `
