@@ -921,11 +921,11 @@
                                 const totalGames = Number(seg.games || 0);
                                 const finalLeft = yearLeftPercent + (yearWidthPercent * (seg._leftPct || 0) / 100);
                                 const computedWidth = yearWidthPercent * ((seg._widthPct || 0) / 100);
-                                const minWidthPct = 0.8; // ensure visibility for very short stints
+                                const minWidthPct = 2.8; // ensure visibility for very short stints (bigger floor)
                                 const finalWidth = Math.max(minWidthPct, computedWidth);
                             return `
                                 <div class="level-bar ${colorClass} ${hasOverlaps ? 'staggered' : ''}" 
-                                     style="left: ${finalLeft}%; width: ${finalWidth}%;"
+                                         style="left: ${finalLeft}%; width: ${finalWidth}%; min-width: 24px;"
                                      title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${totalGames} games">
                                     ${totalGames || ''}
                                 </div>
