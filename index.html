@@ -828,8 +828,10 @@
                 const yearLevelMap = {};
                 years.forEach(year => {
                     yearLevelMap[year] = [];
-                    // For left->right: lowest level on the left, highest on the right
-                    const leftToRightLevels = [...sortedLevels].sort((a,b)=> (levelHierarchy[b]||999) - (levelHierarchy[a]||999));
+                    // Explicit left-to-right order: lowest -> highest
+                    const levelOrder = ['R','DSL','CPX','A','A+','AA','AAA','MLB'];
+                    const presentLevels = new Set(Object.keys(levelData));
+                    const leftToRightLevels = levelOrder.filter(lvl => presentLevels.has(lvl));
                     leftToRightLevels.forEach(level => {
                         const levelStats = levelData[level];
                         const yearStats = levelStats.filter(stat => stat.year === year);
@@ -877,8 +879,10 @@
                         const staggerOffset = getStaggerOffset(level, year);
 
                         // Within the year, if multiple stints exist for this level-year, split the width equally
-                        const stintCount = yearStats.length;
-                        const innerBars = yearStats.map((item, idx) => {
+                        // Group stints by exact season/year to avoid cross-year splitting
+                        const yearOnlyStats = yearStats.filter(s => s.year === year);
+                        const stintCount = yearOnlyStats.length;
+                        const innerBars = yearOnlyStats.map((item, idx) => {
                             const teams = (item.team || '').toString();
                             const totalGames = Number(item.games || 0);
                             const sliceLeft = (idx / stintCount) * yearWidthPercent;
