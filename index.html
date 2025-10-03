@@ -352,6 +352,11 @@
             text-shadow: 0 1px 2px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
             cursor: pointer;
+            z-index: 1;
+        }
+
+        .level-bar.staggered {
+            z-index: 2;
         }
 
         .level-bar:hover {
@@ -450,6 +455,8 @@
             constructor() {
                 this.data = [];
                 this.scoutGrades = [];
+                this.levelProgression = [];
+                this.levelProgressionIndex = new Map();
                 this.searchIndex = new Map();
                 this.searchInput = document.getElementById('searchInput');
                 this.status = document.getElementById('status');
@@ -491,14 +498,28 @@
                 }
             }
 
+            buildProgressionIndex() {
+                this.levelProgressionIndex.clear();
+                if (!Array.isArray(this.levelProgression)) return;
+                for (const entry of this.levelProgression) {
+                    const normalizedName = this.normalizeName(entry.player);
+                    if (!normalizedName) continue;
+                    this.levelProgressionIndex.set(normalizedName, entry);
+                    if (entry.oPlayerId) {
+                        this.levelProgressionIndex.set(entry.oPlayerId, entry);
+                    }
+                }
+            }
+
             async loadData() {
                 try {
                     this.updateStatus('Loading prospect data...', 'loading');
                     
-                    // Load both prospect stats and scout grades
-                    const [statsResponse, gradesResponse] = await Promise.all([
+                    // Load prospect stats, scout grades, and level progression
+                    const [statsResponse, gradesResponse, progressionResponse] = await Promise.all([
                         fetch('./Prospect stats.json'),
-                        fetch('./Scout grades updated.json')
+                        fetch('./Scout grades updated.json'),
+                        fetch('./Level Progression Tracking.json').catch(() => ({ ok: false }))
                     ]);
                     
                     if (!statsResponse.ok) {
@@ -514,6 +535,15 @@
                     // Load scout grades if available
                     if (gradesResponse.ok) {
                         this.scoutGrades = await gradesResponse.json();
+                    }
+                    // Load level progression if available
+                    if (progressionResponse && progressionResponse.ok) {
+                        try {
+                            this.levelProgression = await progressionResponse.json();
+                            this.buildProgressionIndex();
+                        } catch (_) {
+                            this.levelProgression = [];
+                        }
                     }
                     
                     this.buildSearchIndex();
@@ -654,6 +684,33 @@
                 `;
             }
 
+            renderLevelDebuts(playerName) {
+                const entry = this.levelProgressionIndex.get(this.normalizeName(playerName));
+                if (!entry || !entry.level_debuts) return '';
+                const levels = Object.keys(entry.level_debuts);
+                if (levels.length === 0) return '';
+                const levelHierarchy = { 'MLB':1,'AAA':2,'AA':3,'A+':4,'A':5,'CPX':6,'DSL':7,'R':8 };
+                levels.sort((a,b) => (levelHierarchy[a]||999) - (levelHierarchy[b]||999));
+                return `
+                    <div class="timeline-container">
+                        <div class="timeline-title">Level Debuts</div>
+                        <div class="stats-grid">
+                            ${levels.map(level => {
+                                const info = entry.level_debuts[level];
+                                const date = info.debut_date || '';
+                                const team = info.team || '';
+                                return `
+                                    <div class="stat-item">
+                                        <div class="stat-label">${level}</div>
+                                        <div class="stat-value">${date}${team ? ' • ' + team : ''}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
             generateTimelineData(stats) {
                 if (!stats || stats.length === 0) return null;
 
@@ -745,11 +802,22 @@
                     });
                 });
 
-                // Calculate stagger offsets for each level in each year
+                // Calculate horizontal stagger offsets for each level in each year
                 const getStaggerOffset = (level, year) => {
                     const activeLevels = yearLevelMap[year];
                     const levelIndex = activeLevels.indexOf(level);
-                    return levelIndex * 2; // 2px offset per level
+                    const totalLevels = activeLevels.length;
+                    
+                    if (totalLevels <= 1) return { left: 0, width: 100 };
+                    
+                    // Stagger horizontally: left to right, with highest level on the right
+                    const staggerWidth = 100 / totalLevels; // Each level gets equal width
+                    const leftOffset = levelIndex * staggerWidth;
+                    
+                    return { 
+                        left: leftOffset, 
+                        width: staggerWidth 
+                    };
                 };
 
                 const levelRows = sortedLevels.map(level => {
@@ -771,13 +839,17 @@
                         const teams = [...new Set(yearStats.map(stat => stat.team))].filter(t => t);
                         const teamText = teams.length > 0 ? teams.join(', ') : '';
                         
-                        const leftPercent = ((year - minYear) / yearRange) * 100;
-                        const widthPercent = (1 / yearRange) * 100;
+                        const yearLeftPercent = ((year - minYear) / yearRange) * 100;
+                        const yearWidthPercent = (1 / yearRange) * 100;
                         const staggerOffset = getStaggerOffset(level, year);
+                        
+                        // Calculate final position within the year
+                        const finalLeft = yearLeftPercent + (yearWidthPercent * staggerOffset.left / 100);
+                        const finalWidth = yearWidthPercent * staggerOffset.width / 100;
 
                         return `
-                            <div class="level-bar ${colorClass}" 
-                                 style="left: ${leftPercent}%; width: ${widthPercent}%; top: ${staggerOffset}px;"
+                            <div class="level-bar ${colorClass} ${hasOverlaps ? 'staggered' : ''}" 
+                                 style="left: ${finalLeft}%; width: ${finalWidth}%;"
                                  title="${year} - ${level}${teamText ? ' (' + teamText + ')' : ''} - ${totalGames} games">
                                 ${year}
                             </div>
@@ -785,7 +857,7 @@
                     }).join('');
 
                     return `
-                        <div class="level-row ${hasOverlaps ? 'staggered' : ''}">
+                        <div class="level-row">
                             <div class="level-label">${level}</div>
                             <div class="level-timeline">
                                 ${bars}
@@ -849,6 +921,7 @@
                         </div>
                         <div class="stats-container">
                             ${timelineData ? this.renderTimeline(timelineData) : ''}
+                            ${this.renderLevelDebuts(player.player)}
                             ${sortedStats.map(stat => this.renderSeasonStats(stat)).join('')}
                         </div>
                     </div>
