@@ -905,10 +905,14 @@
                         
                         if (segments.length === 0) return '';
 
-                        // Sort segments by start date for proper staggering
-                        segments.sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''));
+                        // Sort segments chronologically by start date (earliest first, left to right)
+                        segments.sort((a, b) => {
+                            const dateA = a.start_date || `${year}-01-01`;
+                            const dateB = b.start_date || `${year}-01-01`;
+                            return dateA.localeCompare(dateB);
+                        });
                         
-                        // Create staggered bars for each segment with proper horizontal spacing
+                        // Create chronologically ordered bars from left to right
                         const segmentBars = segments.map((segment, segmentIndex) => {
                             const games = segment.games || 0;
                             const teams = segment.team || '';
@@ -916,36 +920,33 @@
                             
                             // Calculate bar width based on games (minimum 8% of year width)
                             const minBarWidth = yearWidthPercent * 0.08;
-                            const maxBarWidth = yearWidthPercent * 0.35; // Max 35% of year width
-                            const gamesBasedWidth = Math.min(maxBarWidth, Math.max(minBarWidth, yearWidthPercent * 0.15));
+                            const maxBarWidth = yearWidthPercent * 0.3; // Max 30% of year width
+                            const gamesBasedWidth = Math.min(maxBarWidth, Math.max(minBarWidth, yearWidthPercent * 0.12));
                             
-                            // For multiple segments, distribute them horizontally within the year
+                            // Calculate position chronologically from left to right
                             let barLeft;
                             if (segments.length === 1) {
                                 // Single segment - center it in the year
                                 barLeft = yearLeftPercent + (yearWidthPercent / 2) - (gamesBasedWidth / 2);
                             } else {
-                                // Multiple segments - space them evenly with gaps
+                                // Multiple segments - arrange chronologically from left to right
                                 const totalSegments = segments.length;
-                                const gapWidth = yearWidthPercent * 0.02; // 2% gap between segments
+                                const gapWidth = yearWidthPercent * 0.015; // 1.5% gap between segments
                                 const availableWidth = yearWidthPercent - (gapWidth * (totalSegments - 1));
                                 const segmentWidth = Math.min(gamesBasedWidth, availableWidth / totalSegments);
                                 
+                                // Position segments chronologically from left to right
                                 const segmentSpacing = segmentWidth + gapWidth;
-                                const startOffset = (yearWidthPercent - (segmentSpacing * totalSegments - gapWidth)) / 2;
-                                barLeft = yearLeftPercent + startOffset + (segmentIndex * segmentSpacing);
+                                barLeft = yearLeftPercent + 2 + (segmentIndex * segmentSpacing);
                             }
                             
                             // Ensure bar stays within year boundaries
                             const clampedLeft = Math.max(yearLeftPercent + 2, Math.min(yearLeftPercent + yearWidthPercent - gamesBasedWidth - 2, barLeft));
                             const clampedWidth = Math.min(gamesBasedWidth, yearLeftPercent + yearWidthPercent - 2 - clampedLeft);
                             
-                            // For multiple segments in same year, stagger them vertically
-                            const staggerOffset = segments.length > 1 ? (segmentIndex * 4) : 0; // 4px stagger
-                            
                             return `
                                 <div class="level-bar ${colorClass}"
-                                     style="left: ${clampedLeft}%; width: ${clampedWidth}%; top: ${staggerOffset}px;"
+                                     style="left: ${clampedLeft}%; width: ${clampedWidth}%;"
                                      title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${games} games${startDate ? ' - Started: ' + startDate : ''}">
                                     ${games || ''}
                                 </div>
