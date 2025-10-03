@@ -761,17 +761,22 @@
                     levelData[level].push({ year, team: stat.Team || '', games: stat.G || 0, level });
                 });
 
-                // If we have detailed progression, prefer its games aggregation
+                // If we have detailed progression, prefer stints (do NOT aggregate; allow multiple per year)
                 if (progressionEntry && Array.isArray(progressionEntry.level_stints)) {
                     const byLevelYear = new Map();
                     for (const stint of progressionEntry.level_stints) {
                         const level = stint.level || 'Unknown';
                         const year = parseInt(stint.season) || 0;
                         const key = `${level}__${year}`;
-                        const prev = byLevelYear.get(key) || { games: 0, teams: new Set() };
-                        prev.games += Number(stint.games || 0);
-                        (stint.teams || []).forEach(t => prev.teams.add(t));
-                        byLevelYear.set(key, prev);
+                        const list = byLevelYear.get(key) || [];
+                        list.push({
+                            year,
+                            team: Array.isArray(stint.teams) ? stint.teams.join(', ') : (stint.team || ''),
+                            games: Number(stint.games || 0),
+                            level,
+                            start_date: stint.start_date || ''
+                        });
+                        byLevelYear.set(key, list);
                     }
                     // Replace levelData with progression aggregation where available
                     const newLevelData = {};
@@ -779,13 +784,10 @@
                         const [level, yearStr] = key.split('__');
                         const year = parseInt(yearStr);
                         if (!newLevelData[level]) newLevelData[level] = [];
-                        const agg = byLevelYear.get(key);
-                        newLevelData[level].push({
-                            year,
-                            team: Array.from(agg.teams).join(', '),
-                            games: agg.games,
-                            level
-                        });
+                        const stints = byLevelYear.get(key) || [];
+                        // sort stints by start_date for visual order
+                        stints.sort((a,b) => (a.start_date||'').localeCompare(b.start_date||''));
+                        newLevelData[level].push(...stints);
                     }
                     // Keep any levels not present in progression
                     for (const lvl of Object.keys(levelData)) {
@@ -826,7 +828,9 @@
                 const yearLevelMap = {};
                 years.forEach(year => {
                     yearLevelMap[year] = [];
-                    sortedLevels.forEach(level => {
+                    // For left->right: lowest level on the left, highest on the right
+                    const leftToRightLevels = [...sortedLevels].sort((a,b)=> (levelHierarchy[b]||999) - (levelHierarchy[a]||999));
+                    leftToRightLevels.forEach(level => {
                         const levelStats = levelData[level];
                         const yearStats = levelStats.filter(stat => stat.year === year);
                         if (yearStats.length > 0) {
@@ -868,25 +872,29 @@
                         const yearStats = levelStats.filter(stat => stat.year === year);
                         if (yearStats.length === 0) return '';
 
-                        const totalGames = yearStats.reduce((sum, stat) => sum + (stat.games || 0), 0);
-                        const teams = [...new Set(yearStats.map(stat => stat.team))].filter(t => t);
-                        const teamText = teams.length > 0 ? teams.join(', ') : '';
-                        
                         const yearLeftPercent = ((year - minYear) / yearRange) * 100;
                         const yearWidthPercent = (1 / yearRange) * 100;
                         const staggerOffset = getStaggerOffset(level, year);
-                        
-                        // Calculate final position within the year
-                        const finalLeft = yearLeftPercent + (yearWidthPercent * staggerOffset.left / 100);
-                        const finalWidth = yearWidthPercent * staggerOffset.width / 100;
 
-                        return `
-                            <div class="level-bar ${colorClass} ${hasOverlaps ? 'staggered' : ''}" 
-                                 style="left: ${finalLeft}%; width: ${finalWidth}%;"
-                                 title="${year} - ${level}${teamText ? ' (' + teamText + ')' : ''} - ${totalGames} games">
-                                ${totalGames || ''}
-                            </div>
-                        `;
+                        // Within the year, if multiple stints exist for this level-year, split the width equally
+                        const stintCount = yearStats.length;
+                        const innerBars = yearStats.map((item, idx) => {
+                            const teams = (item.team || '').toString();
+                            const totalGames = Number(item.games || 0);
+                            const sliceLeft = (idx / stintCount) * yearWidthPercent;
+                            const sliceWidth = (1 / stintCount) * yearWidthPercent;
+                            const finalLeft = yearLeftPercent + (yearWidthPercent * staggerOffset.left / 100) + sliceLeft;
+                            const finalWidth = (yearWidthPercent * staggerOffset.width / 100) * (1 / stintCount);
+                            return `
+                                <div class="level-bar ${colorClass} ${hasOverlaps ? 'staggered' : ''}" 
+                                     style="left: ${finalLeft}%; width: ${finalWidth}%;"
+                                     title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${totalGames} games">
+                                    ${totalGames || ''}
+                                </div>
+                            `;
+                        }).join('');
+
+                        return innerBars;
                     }).join('');
 
                     return `
