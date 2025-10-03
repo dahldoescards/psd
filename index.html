@@ -340,24 +340,15 @@
             overflow: hidden;
         }
 
-        .level-timeline::before {
-            content: '';
+        .year-grid-line {
             position: absolute;
             top: 0;
-            left: 0;
-            right: 0;
             bottom: 0;
-            background: repeating-linear-gradient(
-                90deg,
-                transparent 0px,
-                transparent calc(33.333% - 1px),
-                rgba(52, 58, 64, 0.1) 33.333%,
-                rgba(52, 58, 64, 0.1) calc(33.333% + 1px),
-                transparent calc(33.333% + 2px)
-            );
-            pointer-events: none;
-            z-index: 0;
+            width: 1px;
+            background: rgba(52, 58, 64, 0.1);
+            z-index: 1;
         }
+
 
         .level-bar {
             position: absolute;
@@ -981,10 +972,17 @@
                         return innerBars;
                     }).join('');
 
+                    // Create year boundary grid lines that align with the header
+                    const gridLines = years.slice(1).map(year => {
+                        const yearLeftPercent = ((year - minYear) / yearRange) * 100;
+                        return `<div class="year-grid-line" style="left: ${yearLeftPercent}%;"></div>`;
+                    }).join('');
+
                     return `
                         <div class="level-row">
                             <div class="level-label">${level}</div>
                             <div class="level-timeline">
+                                ${gridLines}
                                 ${bars}
                             </div>
                         </div>
