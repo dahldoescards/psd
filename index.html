@@ -842,7 +842,7 @@
             renderTimeline(timelineData, progressionEntry = null) {
                 if (!timelineData) return '';
 
-                const { years, levelData, levelHierarchy, levelColors, yearSegments } = timelineData;
+                const { years, levelData, levelHierarchy, levelColors } = timelineData;
                 
                 // Sort levels by hierarchy
                 const sortedLevels = Object.keys(levelData).sort((a, b) => {
@@ -855,123 +855,36 @@
                 const maxYear = Math.max(...years);
                 const yearRange = maxYear - minYear + 1;
 
-                // Create a map to track which levels are active in each year
-                const yearLevelMap = {};
-                years.forEach(year => {
-                    yearLevelMap[year] = [];
-                    // Explicit left-to-right order: lowest -> highest
-                    const levelOrder = ['R','DSL','CPX','A','A+','AA','AAA','MLB'];
-                    const presentLevels = new Set(Object.keys(levelData));
-                    const leftToRightLevels = levelOrder.filter(lvl => presentLevels.has(lvl));
-                    leftToRightLevels.forEach(level => {
-                        const levelStats = levelData[level];
-                        const yearStats = levelStats.filter(stat => stat.year === year);
-                        if (yearStats.length > 0) {
-                            yearLevelMap[year].push(level);
-                        }
-                    });
-                });
-
-                // Build per-year layouts proportional to games played
-                const yearLayouts = {};
-                years.forEach(year => {
-                    const segs = (yearSegments && yearSegments[year]) ? [...yearSegments[year]] : [];
-                    segs.sort((a,b) => (a._order||0) - (b._order||0));
-                    const totalGames = Math.max(1, segs.reduce((sum, s) => sum + Number(s.games || 0), 0));
-                    
-                    // Calculate minimum width based on total games in year to ensure small counts are visible
-                    const minWidthPct = Math.max(8.0, Math.min(15.0, 100 / Math.max(1, segs.length))); // 8-15% minimum
-                    
-                    const gapPct = 1.0; // smaller gap between stints
-                    const effectiveWidthPct = Math.max(0, 100 - gapPct * Math.max(0, segs.length - 1));
-                    let accPct = 0;
-                    yearLayouts[year] = segs.map(s => {
-                        const portion = (Number(s.games || 0) / totalGames);
-                        let widthPct = portion * effectiveWidthPct;
-                        
-                        // Ensure minimum width for visibility
-                        widthPct = Math.max(minWidthPct, widthPct);
-                        
-                        const leftPct = accPct;
-                        accPct += widthPct + gapPct;
-                        
-                        // Clamp to ensure we don't exceed year boundaries
-                        const clampedLeft = Math.max(0, Math.min(100, leftPct));
-                        const maxWidth = Math.max(0, 100 - clampedLeft);
-                        const clampedWidth = Math.max(0, Math.min(widthPct, maxWidth));
-                        return { ...s, _leftPct: clampedLeft, _widthPct: clampedWidth };
-                    });
-                });
-
-                // Helper to compute per-year lane (level band) offsets in percent
-                const getLaneFor = (level, year) => {
-                    const activeLevels = yearLevelMap[year];
-                    const laneIndex = Math.max(0, activeLevels.indexOf(level));
-                    const total = Math.max(1, activeLevels.length);
-                    const laneWidth = 100 / total;
-                    const laneLeft = laneIndex * laneWidth;
-                    return { laneLeft, laneWidth };
-                };
-
-                // No grid lines - let the header year boundaries be the only vertical lines
-
+                // Simplified approach: each year gets equal width, no overlapping
                 const levelRows = sortedLevels.map(level => {
                     const levelStats = levelData[level];
                     const colorClass = levelColors[level] || 'level-unknown';
-                    
-                    // Check if this level has any overlapping years with other levels
-                    const hasOverlaps = years.some(year => {
-                        const yearStats = levelStats.filter(stat => stat.year === year);
-                        return yearStats.length > 0 && yearLevelMap[year].length > 1;
-                    });
                     
                     // Create bars for each year this level was played
                     const bars = years.map(year => {
                         const yearStats = levelStats.filter(stat => stat.year === year);
                         if (yearStats.length === 0) return '';
 
+                        // Calculate year boundaries - each year gets equal width
                         const yearLeftPercent = ((year - minYear) / yearRange) * 100;
                         const yearWidthPercent = (1 / yearRange) * 100;
 
-                        // Use global per-year layout so widths are proportional to total games in that year
-                        const segments = (yearLayouts[year] || []).filter(seg => seg.level === level);
-                        const innerBars = segments.map(seg => {
-                            const teams = (seg.team || '').toString();
-                            const games = Number(seg.games || 0);
-                            const segLeftPct = Math.max(0, Math.min(100, seg._leftPct || 0));
-                            const segWidthPct = Math.max(0, Math.min(100 - segLeftPct, seg._widthPct || 0));
-                            
-                            // Calculate position within the year segment
-                            const finalLeft = yearLeftPercent + (yearWidthPercent * segLeftPct / 100);
-                            const computedWidth = yearWidthPercent * (segWidthPct / 100);
-                            
-                            // Ensure minimum width for visibility (in pixels, not percentage)
-                            const minWidthPx = 40; // minimum 40px width
-                            const yearWidthPx = yearWidthPercent * (window.innerWidth * 0.8) / 100; // approximate year width in pixels
-                            const minWidthPct = (minWidthPx / yearWidthPx) * 100;
-                            
-                            let finalWidth = Math.max(minWidthPct, computedWidth);
-                            
-                            // STRICT year boundary enforcement
-                            const yearRight = yearLeftPercent + yearWidthPercent;
-                            if (finalLeft + finalWidth > yearRight) {
-                                finalWidth = Math.max(minWidthPct, yearRight - finalLeft);
-                            }
-                            
-                            // Double-check we don't go outside year boundaries
-                            const clampedLeft = Math.max(yearLeftPercent, Math.min(yearRight - finalWidth, finalLeft));
-                            const clampedWidth = Math.max(minWidthPct, Math.min(yearRight - clampedLeft, finalWidth));
-                            
-                            return `
-                                <div class="level-bar ${colorClass}"
-                                     style="left: ${clampedLeft}%; width: ${clampedWidth}%; min-width: 40px;"
-                                     title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${games} games">
-                                    ${games || ''}
-                                </div>
-                            `;
-                        }).join('');
-
-                        return innerBars;
+                        // For this level in this year, show a single bar spanning the full year width
+                        // If there are multiple stints, we'll show them as separate visual elements
+                        const totalGames = yearStats.reduce((sum, stat) => sum + (stat.games || 0), 0);
+                        const teams = yearStats.map(stat => stat.team).filter(Boolean).join(', ');
+                        
+                        // Ensure the bar is strictly within year boundaries
+                        const barLeft = yearLeftPercent + 2; // Small margin from year start
+                        const barWidth = yearWidthPercent - 4; // Small margins on both sides
+                        
+                        return `
+                            <div class="level-bar ${colorClass}"
+                                 style="left: ${barLeft}%; width: ${barWidth}%;"
+                                 title="${year} - ${level}${teams ? ' (' + teams + ')' : ''} - ${totalGames} games">
+                                ${totalGames || ''}
+                            </div>
+                        `;
                     }).join('');
 
                     return `
